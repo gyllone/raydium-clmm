@@ -70,6 +70,11 @@ pub mod amm_v3 {
         )
     }
 
+    /// Create support token22 mint account which can create pool and send rewards with ignoring the not support extensions.
+    pub fn create_support_mint_associated(ctx: Context<CreateSupportMintAssociated>) -> Result<()> {
+        instructions::create_support_mint_associated(ctx)
+    }
+
     /// Updates the owner of the amm config
     /// Must be called by the current owner or admin
     ///
@@ -93,7 +98,7 @@ pub mod amm_v3 {
     ///
     /// * `ctx`- The context of accounts
     /// * `sqrt_price_x64` - the initial sqrt price (amount_token_1 / amount_token_0) of the pool as a Q64.64
-    ///
+    /// Note: The open_time must be smaller than the current block_timestamp on chain.
     pub fn create_pool(
         ctx: Context<CreatePool>,
         sqrt_price_x64: u128,
