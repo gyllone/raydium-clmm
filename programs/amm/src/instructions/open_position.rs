@@ -18,7 +18,7 @@ use anchor_spl::token_2022::{
     spl_token_2022::{self, instruction::AuthorityType},
 };
 use anchor_spl::token_interface;
-use mpl_token_metadata::{instruction::create_metadata_accounts_v3, state::Creator};
+use mpl_token_metadata::{instructions::CreateMetadataAccountV3Builder, types::{Creator, DataV2}};
 use std::cell::RefMut;
 #[cfg(feature = "enable-log")]
 use std::convert::identity;
@@ -827,7 +827,7 @@ fn initialize_metadata_account<'info>(
     authority: &AccountInfo<'info>,
     position_nft_mint: &AccountInfo<'info>,
     metadata_account: &UncheckedAccount<'info>,
-    metadata_program: &Program<'info, Metadata>,
+    _metadata_program: &Program<'info, Metadata>,
     system_program: &Program<'info, System>,
     rent: &Sysvar<'info, Rent>,
     name: String,
@@ -835,28 +835,29 @@ fn initialize_metadata_account<'info>(
     uri: String,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<()> {
-    let create_metadata_ix = create_metadata_accounts_v3(
-        metadata_program.key(),
-        metadata_account.key(),
-        position_nft_mint.key(),
-        authority.key(),
-        payer.key(),
-        authority.key(),
-        name,
-        symbol,
-        uri,
-        Some(vec![Creator {
-            address: authority.key(),
-            verified: true,
-            share: 100,
-        }]),
-        0,
-        true,
-        false,
-        None,
-        None,
-        None,
-    );
+    let create_metadata_ix = CreateMetadataAccountV3Builder::new()
+        .metadata(metadata_account.key())
+        .mint(position_nft_mint.key())
+        .mint_authority(authority.key())
+        .payer(payer.key())
+        .update_authority(authority.key(), true)
+        .system_program(system_program.key())
+        .rent(Some(rent.key()))
+        .is_mutable(false)
+        .data(DataV2 {
+            name,
+            symbol,
+            uri,
+            creators: Some(vec![Creator {
+                address: authority.key(),
+                verified: true,
+                share: 100,
+            }]),
+            seller_fee_basis_points: 0,
+            collection: None,
+            uses: None,
+        })
+        .instruction();
     solana_program::program::invoke_signed(
         &create_metadata_ix,
         &[
